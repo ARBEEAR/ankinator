@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>rebad-ANKI-nator</title>
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --primary-light: #a29bfe;
+            --secondary: #00cec9;
+            --dark: #2d3436;
+            --light: #f5f6fa;
+            --card-bg: #ffffff;
+            --text: #2d3436;
+            --text-light: #636e72;
+            --border: #dfe6e9;
+            --success: #00b894;
+            --error: #d63031;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            --shadow-hover: 0 10px 15px rgba(0, 0, 0, 0.1);
+            --transition: all 0.25s cubic-bezier(0.645, 0.045, 0.355, 1);
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+            background-color: var(--light);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        h1 {
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            font-size: 2.5rem;
+            letter-spacing: -0.5px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: var(--text-light);
+            margin-bottom: 2.5rem;
+            font-size: 1.1rem;
+            font-weight: 400;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            box-shadow: var(--shadow);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+        
+        #startBtn {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        #startBtn:hover {
+            background-color: var(--primary-light);
+        }
+        
+        #clearRowBtn, #clearBtn {
+            background-color: white;
+            color: var(--primary);
+            border: 1px solid var(--border);
+        }
+        
+        #exportBtn {
+            background-color: var(--secondary);
+            color: white;
+        }
+        
+        .status-container {
+            background-color: var(--card-bg);
+            padding: 1.25rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+        
+        .status {
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.95rem;
+        }
+        
+        .status-recording::before {
+            content: "";
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--success);
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .instructions {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        #liveFeedback {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            min-height: 80px;
+            margin: 2rem 0;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+        
+        .command {
+            color: var(--primary);
+            font-weight: 600;
+            background-color: rgba(108, 92, 231, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'SF Mono', monospace;
+        }
+        
+        .transcript {
+            color: var(--text);
+            margin-top: 1rem;
+            line-height: 1.6;
+            font-size: 1.05rem;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 2rem;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+        
+        th {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem 1.25rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        td {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+            min-height: 80px;
+            transition: var(--transition);
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        tr:hover td {
+            background-color: rgba(108, 92, 231, 0.03);
+        }
+        
+        .current-cell {
+            background-color: rgba(108, 92, 231, 0.08);
+            position: relative;
+        }
+        
+        .current-cell::after {
+            content: "✏️ Currently editing";
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 0.7rem;
+            color: var(--primary);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+        
+        .icon {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .export-section {
+            margin-top: 3rem;
+            text-align: center;
+        }
+        
+        .anki-instructions {
+            max-height: 0;
+            overflow: hidden;
+            transition: var(--transition);
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            margin: 1rem auto 0;
+            width: 100%;
+            max-width: 600px;
+            border: 1px solid transparent;
+        }
+        
+        .anki-instructions.expanded {
+            max-height: 500px;
+            padding: 1.5rem;
+            border-color: var(--border);
+            box-shadow: var(--shadow);
+            margin-bottom: 1.5rem;
+        }
+        
+        .toggle-instructions {
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+        }
+        
+        .toggle-instructions:hover {
+            background-color: rgba(108, 92, 231, 0.1);
+        }
+        
+        .editable-cell {
+            min-height: 80px;
+            outline: none;
+            padding: 1rem;
+            border-radius: 6px;
+            transition: var(--transition);
+        }
+        
+        .editable-cell:focus {
+            background-color: rgba(108, 92, 231, 0.05);
+            box-shadow: inset 0 0 0 2px rgba(108, 92, 231, 0.2);
+        }
+        
+        .anki-instructions h3 {
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+        
+        .anki-instructions ol {
+            text-align: left;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .anki-instructions li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .anki-instructions strong {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 1.5rem 1rem;
+            }
+            
+            .controls {
+                gap: 0.75rem;
+            }
+            
+            button {
+                padding: 0.7rem 1rem;
+                font-size: 0.85rem;
+            }
+            
+            td, th {
+                padding: 0.75rem;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h1>rebad-ANKI-nator</h1>
+    <p class="subtitle">Transform your speech into organized flashcards with a modern, intuitive interface</p>
+    
+    <div class="controls">
+        <button id="startBtn">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2h-1v2a8 8 0 0 0 7 7.93V22h2v-2.07A8 8 0 0 0 20 12v-2z"></path>
+            </svg>
+            Start Recording
+        </button>
+        <button id="clearRowBtn">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <path d="M10 11v6"></path>
+                <path d="M14 11v6"></path>
+            </svg>
+            Clear Row
+        </button>
+        <button id="clearBtn">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            Clear All
+        </button>
+    </div>
+    
+    <div class="status-container">
+        <div class="status" id="status">Ready to start</div>
+        <div class="instructions">
+            Say <span class="command">"Back"</span> to switch to back side, 
+            <span class="command">"Next Card"</span> to create new card, 
+            <span class="command">"Undo"</span> to clear current cell, or
+            <span class="command">"Clear Row"</span> to remove current row.
+        </div>
+    </div>
+    
+    <div id="liveFeedback">
+        <div>Your speech will appear here in real-time...</div>
+    </div>
+    
+    <table id="flashcards">
+        <thead>
+            <tr>
+                <th>Front</th>
+                <th>Back</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <div class="export-section">
+        <button id="exportBtn">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Export Flashcards
+        </button>
+        <div class="toggle-instructions" id="toggleInstructions">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            Import Instructions
+        </div>
+        <div class="anki-instructions" id="ankiInstructions">
+            <h3>How to import into Anki</h3>
+            <ol>
+                <li>In Anki, go to <strong>File</strong> → <strong>Import</strong></li>
+                <li>Select the downloaded CSV file</li>
+                <li>Choose "Comma separated values" format</li>
+                <li>Select your basic note type</li>
+                <li>Choose the target deck</li>
+                <li>Map fields if needed (Front → Front, Back → Back)</li>
+                <li>Click <strong>Import</strong></li>
+            </ol>
+            <p><em>Tip: For best results, use the Basic note type with matching field names.</em></p>
+        </div>
+    </div>
+
+    <script>
+        const startBtn = document.getElementById('startBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const clearRowBtn = document.getElementById('clearRowBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const toggleInstructions = document.getElementById('toggleInstructions');
+        const ankiInstructions = document.getElementById('ankiInstructions');
+        const statusEl = document.getElementById('status');
+        const liveFeedback = document.getElementById('liveFeedback');
+        const tableBody = document.querySelector('#flashcards tbody');
+        
+        let recognition;
+        let currentRow = null;
+        let currentColumn = 'front';
+        let isRecording = false;
+        let finalTranscript = '';
+        let interimTranscript = '';
+        let lastCommandTime = 0;
+        const COMMAND_COOLDOWN = 500;
+        let isEditable = false;
+
+        // Initialize speech recognition
+        function initSpeechRecognition() {
+            try {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    throw new Error('Speech recognition not supported');
+                }
+                recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                
+                recognition.onstart = () => {
+                    statusEl.textContent = "Status: Recording...";
+                    statusEl.classList.add('status-recording');
+                    isRecording = true;
+                    startBtn.innerHTML = `
+                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2h-1v2a8 8 0 0 0 7 7.93V22h2v-2.07A8 8 0 0 0 20 12v-2z"></path>
+                        </svg>
+                        Stop Recording
+                    `;
+                    finalTranscript = '';
+                    interimTranscript = '';
+                    setTableEditable(false);
+                    if (!currentRow) {
+                        addNewRow();
+                    }
+                    currentColumn = 'front';
+                    updateLiveFeedback();
+                };
+                
+                recognition.onend = () => {
+                    if (isRecording) {
+                        recognition.start();
+                    } else {
+                        setTableEditable(true);
+                    }
+                };
+                
+                recognition.onresult = (event) => {
+                    interimTranscript = '';
+                    
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript;
+                            processCommand(transcript.trim().toLowerCase());
+                        } else {
+                            interimTranscript += transcript;
+                        }
+                    }
+                    updateLiveFeedback();
+                };
+                
+                recognition.onerror = (event) => {
+                    console.error('Speech recognition error', event.error);
+                    statusEl.textContent = `Status: Error - ${event.error}`;
+                    statusEl.classList.remove('status-recording');
+                    isRecording = false;
+                    startBtn.innerHTML = `
+                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2h-1v2a8 8 0 0 0 7 7.93V22h2v-2.07A8 8 0 0 0 20 12v-2z"></path>
+                        </svg>
+                        Start Recording
+                    `;
+                    setTableEditable(true);
+                };
+                
+            } catch (e) {
+                console.error('Speech recognition not supported', e);
+                statusEl.textContent = "Status: Speech recognition not supported in this browser. Please use Chrome or Edge.";
+                startBtn.disabled = true;
+                setTableEditable(true);
+            }
+        }
+        
+        function setTableEditable(editable) {
+            isEditable = editable;
+            const cells = document.querySelectorAll('td');
+            cells.forEach(cell => {
+                if (editable) {
+                    cell.contentEditable = true;
+                    cell.classList.add('editable-cell');
+                } else {
+                    cell.contentEditable = false;
+                    cell.classList.remove('editable-cell');
+                }
+            });
+        }
+        
+        function updateLiveFeedback() {
+            let feedback = '';
+            
+            if (currentColumn === 'front') {
+                feedback += `<div><span class="command">Adding to Front:</span></div>`;
+            } else if (currentColumn === 'back') {
+                feedback += `<div><span class="command">Adding to Back:</span></div>`;
+            } else {
+                feedback += `<div><span class="command">Waiting for command...</span> Say "Back" or "Next Card"</div>`;
+            }
+            
+            feedback += `<div class="transcript">${finalTranscript} ${interimTranscript}</div>`;
+            liveFeedback.innerHTML = feedback;
+            
+            // Update current cell highlighting
+            document.querySelectorAll('.current-cell').forEach(el => {
+                el.classList.remove('current-cell');
+            });
+            
+            if (currentRow && currentColumn) {
+                const currentCell = currentColumn === 'front' ? currentRow.cells[0] : currentRow.cells[1];
+                currentCell.classList.add('current-cell');
+            }
+        }
+        
+        function processCommand(command) {
+            const now = Date.now();
+            command = command.toLowerCase();
+            
+            if (command.includes('back')) {
+                currentColumn = 'back';
+                statusEl.textContent = "Status: Adding to Back...";
+                finalTranscript = '';
+                lastCommandTime = now;
+                return;
+            } 
+            else if (command.includes('front')) {
+                currentColumn = 'front';
+                statusEl.textContent = "Status: Adding to Front...";
+                finalTranscript = '';
+                lastCommandTime = now;
+                return;
+            }
+            else if (command.includes('next card')) {
+                addNewRow();
+                currentColumn = 'front';
+                statusEl.textContent = "Status: Adding to Front (new card)...";
+                finalTranscript = '';
+                lastCommandTime = now;
+                return;
+            }
+            else if (command.includes('undo')) {
+                if (currentRow && currentColumn) {
+                    const cell = currentColumn === 'front' ? currentRow.cells[0] : currentRow.cells[1];
+                    cell.textContent = '';
+                    statusEl.textContent = `Status: Cleared ${currentColumn} cell`;
+                }
+                finalTranscript = '';
+                lastCommandTime = now;
+                return;
+            }
+            else if (command.includes('clear row')) {
+                clearCurrentRow();
+                finalTranscript = '';
+                lastCommandTime = now;
+                return;
+            }
+
+            if (now - lastCommandTime > COMMAND_COOLDOWN && currentColumn && currentRow) {
+                const cell = currentColumn === 'front' ? currentRow.cells[0] : currentRow.cells[1];
+                let cleanText = command
+                    .replace(/front|back|next card|undo|clear row/gi, '')
+                    .trim();
+                
+                if (cleanText) {
+                    if (cell.textContent.trim() === '') {
+                        cell.textContent = cleanText;
+                    } else {
+                        cell.textContent += ' ' + cleanText;
+                    }
+                }
+            }
+            
+            updateLiveFeedback();
+        }
+        
+        function addNewRow() {
+            currentRow = tableBody.insertRow();
+            currentRow.insertCell(0).className = isEditable ? 'editable-cell' : '';
+            currentRow.insertCell(1).className = isEditable ? 'editable-cell' : '';
+            if (isEditable) {
+                currentRow.cells[0].contentEditable = true;
+                currentRow.cells[1].contentEditable = true;
+            }
+            updateLiveFeedback();
+        }
+        
+        function clearCurrentRow() {
+            if (currentRow) {
+                currentRow.cells[0].textContent = '';
+                currentRow.cells[1].textContent = '';
+                statusEl.textContent = "Status: Current row cleared";
+            } else {
+                statusEl.textContent = "Status: No row to clear";
+            }
+        }
+        
+        function clearTable() {
+            tableBody.innerHTML = '';
+            currentRow = null;
+            currentColumn = 'front';
+            finalTranscript = '';
+            interimTranscript = '';
+            updateLiveFeedback();
+            statusEl.textContent = "Status: Table cleared";
+            statusEl.classList.remove('status-recording');
+        }
+        
+        function exportToCSV() {
+            let csv = 'Front,Back\n';
+            const rows = tableBody.querySelectorAll('tr');
+            
+            rows.forEach(row => {
+                const front = row.cells[0].textContent.replace(/"/g, '""');
+                const back = row.cells[1].textContent.replace(/"/g, '""');
+                csv += `"${front}","${back}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'flashcards.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        startBtn.addEventListener('click', () => {
+            if (!isRecording) {
+                if (!recognition) {
+                    initSpeechRecognition();
+                }
+                try {
+                    recognition.start();
+                } catch (e) {
+                    statusEl.textContent = "Status: Error starting recognition. Please refresh and try again.";
+                    console.error(e);
+                }
+            } else {
+                recognition.stop();
+                isRecording = false;
+                startBtn.innerHTML = `
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2h-1v2a8 8 0 0 0 7 7.93V22h2v-2.07A8 8 0 0 0 20 12v-2z"></path>
+                    </svg>
+                    Start Recording
+                `;
+                statusEl.textContent = "Status: Not recording";
+                statusEl.classList.remove('status-recording');
+                setTableEditable(true);
+            }
+        });
+        
+        clearBtn.addEventListener('click', clearTable);
+        clearRowBtn.addEventListener('click', clearCurrentRow);
+        exportBtn.addEventListener('click', exportToCSV);
+        
+        toggleInstructions.addEventListener('click', () => {
+            ankiInstructions.classList.toggle('expanded');
+            toggleInstructions.textContent = ankiInstructions.classList.contains('expanded') 
+                ? 'Hide Import Instructions' 
+                : 'Import Instructions';
+        });
+        
+        // Initialize with editable table when not recording
+        setTableEditable(true);
+    </script>
+</body>
+</html>
